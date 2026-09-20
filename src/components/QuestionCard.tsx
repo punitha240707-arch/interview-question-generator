@@ -59,27 +59,34 @@ ${question.followUpQuestions.map((q, idx) => `${idx + 1}. ${q}`).join('\n')}`;
     }
   };
 
+  const hasSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window;
+
   const handleToggleSpeak = () => {
-    if (!('speechSynthesis' in window)) return;
+    try {
+      if (!hasSpeech) return;
 
-    if (isSpeaking) {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        return;
+      }
+
       window.speechSynthesis.cancel();
+      const text = isExpanded
+        ? `${question.question}. Here is a sample answer: ${question.sampleAnswer.replace(/[`*#]/g, '')}`
+        : question.question;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+
+      setIsSpeaking(true);
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('Speech synthesis unavailable:', err);
       setIsSpeaking(false);
-      return;
     }
-
-    window.speechSynthesis.cancel();
-    const text = isExpanded
-      ? `${question.question}. Here is a sample answer: ${question.sampleAnswer.replace(/[`*#]/g, '')}`
-      : question.question;
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
   };
 
   // Difficulty badge styling
@@ -149,7 +156,7 @@ ${question.followUpQuestions.map((q, idx) => `${idx + 1}. ${q}`).join('\n')}`;
               <CheckCircle className="w-4 h-4" />
             </button>
 
-            {'speechSynthesis' in window && (
+            {hasSpeech && (
               <button
                 onClick={handleToggleSpeak}
                 className={`p-1.5 rounded-lg border transition-colors ${
