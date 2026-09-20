@@ -1,7 +1,8 @@
 {
-  "name": "react-example",
+  "name": "interview-question-generator",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "homepage": "https://punitha240707-arch.github.io/interview-question-generator/",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",

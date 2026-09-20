@@ -5,6 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { defaultJavaInterviewData } from './data/defaultJavaData';
+import { generateClientInterview } from './utils/clientGenerator';
 import { InterviewPackage, QuestionType, InterviewQuestion } from './types';
 import { Header } from './components/Header';
 import { RoleInputBar } from './components/RoleInputBar';
@@ -52,6 +53,14 @@ export default function App() {
         body: JSON.stringify({ role, experienceLevel, focusArea }),
       });
 
+      // On static hosting like GitHub Pages, the backend route returns 404
+      if (response.status === 404) {
+        console.info('Static hosting detected (GitHub Pages). Generating questions in browser.');
+        const clientGenerated = generateClientInterview(role, experienceLevel, focusArea);
+        setInterviewData(clientGenerated);
+        return;
+      }
+
       if (!response.ok) {
         const errorJson = await response.json().catch(() => ({}));
         throw new Error(errorJson.error || `Generation failed with status ${response.status}`);
@@ -60,21 +69,26 @@ export default function App() {
       const data: InterviewPackage = await response.json();
       setInterviewData(data);
     } catch (err: any) {
-      console.error('Generation error:', err);
-      let userFriendlyMsg = 'The AI model experienced high temporary demand. You can continue practicing with the curated Java Developer questions or retry in a moment.';
-      if (typeof err.message === 'string') {
-        try {
-          const parsed = JSON.parse(err.message);
-          if (parsed?.error?.message) {
-            userFriendlyMsg = parsed.error.message;
-          }
-        } catch {
-          if (err.message && !err.message.includes('{"')) {
-            userFriendlyMsg = err.message;
+      console.warn('Backend unavailable, using built-in interview generator:', err);
+      try {
+        const clientGenerated = generateClientInterview(role, experienceLevel, focusArea);
+        setInterviewData(clientGenerated);
+      } catch {
+        let userFriendlyMsg = 'The AI model experienced high temporary demand. You can continue practicing with the curated Java Developer questions or retry in a moment.';
+        if (typeof err.message === 'string') {
+          try {
+            const parsed = JSON.parse(err.message);
+            if (parsed?.error?.message) {
+              userFriendlyMsg = parsed.error.message;
+            }
+          } catch {
+            if (err.message && !err.message.includes('{"')) {
+              userFriendlyMsg = err.message;
+            }
           }
         }
+        setErrorMessage(userFriendlyMsg);
       }
-      setErrorMessage(userFriendlyMsg);
     } finally {
       setIsLoading(false);
     }
